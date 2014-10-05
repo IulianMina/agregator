@@ -7,23 +7,24 @@ class ContentParser {
     private $_element;
     private $_parsedUrl;
 
-    function __construct($url, $element) {
-        require 'QueryPath/src/qp.php';
+    public function __construct() {
+        require 'querypath/src/qp.php';
+    }
 
+    public function setURL($url, $element){
         $this->_url = $url;
         $this->_element = $element;
-
         $this->_parsedUrl = $this->parseURL($this->_url);
     }
 
     /**
      * Main function
      */
-    function parse() {
+    public function parse() {
         $file = $this->getSource($this->_url);
-
         $content = $this->getElementContent($this->_element, $file);
-        echo $this->sanitize($content);
+
+        return $this->sanitize($content);
     }
 
     /**
@@ -31,18 +32,26 @@ class ContentParser {
      * @param $url
      * @return string
      */
-    function getSource($url) {
+    private function getSource($url) {
         $parsedUrl = $this->_parsedUrl;
 
-        $options = array(
-            "$parsedUrl[protocol]" => array(
-                'method'=>"GET",
-                'header'=> "User-Agent: Mozilla/5.0 (Windows NT 6.3; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/37.0.2062.124 Safari/537.36"
-            )
-        );
+//        $options = array(
+//            "$parsedUrl[protocol]" => array(
+//                'method'=>"GET",
+//                'header'=> "User-Agent: Mozilla/5.0 (Windows NT 6.3; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/37.0.2062.124 Safari/537.36"
+//            )
+//        );
+//
+//        $context = stream_context_create($options);
+//        return file_get_contents($url, false, $context);
 
-        $context = stream_context_create($options);
-        return file_get_contents($url, false, $context);
+        $ch = curl_init($url);
+        curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+        curl_setopt($ch, CURLOPT_BINARYTRANSFER, true);
+        $content = curl_exec($ch);
+        curl_close($ch);
+
+        return $content;
     }
 
     /**
@@ -51,7 +60,7 @@ class ContentParser {
      * @param $file
      * @return mixed
      */
-    function getElementContent($element, $file) {
+    private function getElementContent($element, $file) {
         $dom = new DOMDocument();
         @$dom->loadHTML($file);
 
@@ -63,7 +72,7 @@ class ContentParser {
      * @param $text
      * @return mixed|string
      */
-    function sanitize($text) {
+    private function sanitize($text) {
         // stip tags
         $text = strip_tags($text, '<p><span><strong><br><img>');
 
@@ -88,7 +97,7 @@ class ContentParser {
      * @param $base
      * @return mixed
      */
-    function relativeToAbsoluteURL($text, $base) {
+    private function relativeToAbsoluteURL($text, $base) {
         if (empty($base))
             return $text;
 
@@ -114,7 +123,7 @@ class ContentParser {
      * @param $url
      * @return array
      */
-    function parseURL($url) {
+    private function parseURL($url) {
         $parsedUrl = parse_url($url);
 
         return array(
@@ -125,18 +134,4 @@ class ContentParser {
 
 }
 
-
-$url = 'http://www.gsp.ro/fotbal/liga-1/exclusiv-au-decis-sa-ramina-in-ghencea-lucian-sinmartean-si-lukasz-szukala-au-semnat-prelungirile-cu-steaua-435778.html';
-$element = '.articol_inner';
-
-$plm = new ContentParser($url, $element);
-
 ?>
-<html>
-<head>
-    <meta charset="UTF-8">
-</head>
-<body>
-<?php $plm->parse();  ?>
-</body>
-</html>
